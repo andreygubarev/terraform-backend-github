@@ -11,7 +11,7 @@ services:
   terraform-backend-github:
     image: ghcr.io/andreygubarev/terraform-backend-github:0.1.0
     environment:
-      - GITHUB_TOKEN=
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
     ports:
       - 8080:8080
     restart: unless-stopped

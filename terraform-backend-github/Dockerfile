@@ -15,6 +15,8 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
 FROM alpine:3.18 AS terraform-backend-github
 COPY --from=build /usr/local/bin/terraform-backend-github /usr/local/bin/terraform-backend-github
 
+ENV GIN_MODE=release
 ENV GITHUB_TOKEN=
+
 EXPOSE 8080/tcp
 CMD ["terraform-backend-github"]
