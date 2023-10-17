@@ -7,15 +7,15 @@ import (
 	"github.com/google/go-github/v56/github"
 )
 
-type TerraformState struct {
+type GithubObject struct {
 	Owner string
 	Repo  string
 	Path  string
 	Ref   string
 }
 
-func (t *TerraformState) Content(c *gin.Context) (*github.RepositoryContent, bool, error) {
-	_, resp, _ := gh.Repositories.Get(c, t.Owner, t.Repo)
+func (g *GithubObject) GetContent(c *gin.Context) (*github.RepositoryContent, bool, error) {
+	_, resp, _ := client.Repositories.Get(c, g.Owner, g.Repo)
 	if resp.StatusCode == 401 {
 		return nil, false, errors.New("unauthorized")
 	}
@@ -23,8 +23,8 @@ func (t *TerraformState) Content(c *gin.Context) (*github.RepositoryContent, boo
 		return nil, false, errors.New("repo not found")
 	}
 
-	fileContent, _, resp, _ := gh.Repositories.GetContents(c, t.Owner, t.Repo, t.Path, &github.RepositoryContentGetOptions{
-		Ref: *github.String(t.Ref),
+	fileContent, _, resp, _ := client.Repositories.GetContents(c, g.Owner, g.Repo, g.Path, &github.RepositoryContentGetOptions{
+		Ref: *github.String(g.Ref),
 	})
 	if resp.StatusCode == 401 {
 		return nil, false, errors.New("unauthorized")
@@ -36,7 +36,7 @@ func (t *TerraformState) Content(c *gin.Context) (*github.RepositoryContent, boo
 	return fileContent, true, nil
 }
 
-func NewTerraformState(c *gin.Context) (*TerraformState, error) {
+func NewGithubObject(c *gin.Context) (*GithubObject, error) {
 	owner := c.Param("owner")
 	repo := c.Param("repo")
 
@@ -52,7 +52,7 @@ func NewTerraformState(c *gin.Context) (*TerraformState, error) {
 		ref = "main"
 	}
 
-	return &TerraformState{
+	return &GithubObject{
 		Owner: owner,
 		Repo:  repo,
 		Path:  path,

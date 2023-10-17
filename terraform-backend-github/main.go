@@ -8,14 +8,14 @@ import (
 	"github.com/google/go-github/v56/github"
 )
 
-var gh *github.Client
+var client *github.Client
 
 func main() {
 	token := os.Getenv("GITHUB_TOKEN")
 	if token == "" {
 		panic("GITHUB_TOKEN is required")
 	}
-	gh = github.NewClient(nil).WithAuthToken(token)
+	client = github.NewClient(nil).WithAuthToken(token)
 
 	r := gin.Default()
 	r.GET("/:owner/:repo/*path", getHandler)
@@ -27,7 +27,7 @@ func main() {
 }
 
 func getHandler(c *gin.Context) {
-	state, err := NewTerraformState(c)
+	g, err := NewGithubObject(c)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": err.Error(),
@@ -35,7 +35,7 @@ func getHandler(c *gin.Context) {
 		return
 	}
 
-	fileContent, exists, err := state.Content(c)
+	fileContent, exists, err := g.GetContent(c)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": err.Error(),
@@ -62,7 +62,7 @@ func getHandler(c *gin.Context) {
 }
 
 func postHandler(c *gin.Context) {
-	state, err := NewTerraformState(c)
+	g, err := NewGithubObject(c)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": err.Error(),
@@ -70,7 +70,7 @@ func postHandler(c *gin.Context) {
 		return
 	}
 
-	fileContent, exists, err := state.Content(c)
+	fileContent, exists, err := g.GetContent(c)
 	if err != nil {
 		if err.Error() == "unauthorized" {
 			c.JSON(http.StatusUnauthorized, gin.H{
@@ -93,11 +93,11 @@ func postHandler(c *gin.Context) {
 	}
 
 	if exists {
-		_, _, err = gh.Repositories.UpdateFile(c, state.Owner, state.Repo, state.Path, &github.RepositoryContentFileOptions{
+		_, _, err = client.Repositories.UpdateFile(c, g.Owner, g.Repo, g.Path, &github.RepositoryContentFileOptions{
 			SHA:     fileContent.SHA,
 			Message: github.String("update terraform state"),
 			Content: body,
-			Branch:  github.String(state.Ref),
+			Branch:  github.String(g.Ref),
 		})
 
 		if err != nil {
@@ -109,10 +109,10 @@ func postHandler(c *gin.Context) {
 		c.Data(http.StatusOK, "application/json", []byte("{}"))
 		return
 	} else {
-		_, _, err = gh.Repositories.CreateFile(c, state.Owner, state.Repo, state.Path, &github.RepositoryContentFileOptions{
+		_, _, err = client.Repositories.CreateFile(c, g.Owner, g.Repo, g.Path, &github.RepositoryContentFileOptions{
 			Message: github.String("create terraform state"),
 			Content: body,
-			Branch:  github.String(state.Ref),
+			Branch:  github.String(g.Ref),
 		})
 
 		if err != nil {
@@ -128,7 +128,7 @@ func postHandler(c *gin.Context) {
 }
 
 func deleteHandler(c *gin.Context) {
-	state, err := NewTerraformState(c)
+	g, err := NewGithubObject(c)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": err.Error(),
@@ -136,7 +136,7 @@ func deleteHandler(c *gin.Context) {
 		return
 	}
 
-	fileContent, exists, err := state.Content(c)
+	fileContent, exists, err := g.GetContent(c)
 	if err != nil {
 		if err.Error() == "unauthorized" {
 			c.JSON(http.StatusUnauthorized, gin.H{
@@ -157,10 +157,10 @@ func deleteHandler(c *gin.Context) {
 		return
 	}
 
-	_, _, err = gh.Repositories.DeleteFile(c, state.Owner, state.Repo, state.Path, &github.RepositoryContentFileOptions{
+	_, _, err = client.Repositories.DeleteFile(c, g.Owner, g.Repo, g.Path, &github.RepositoryContentFileOptions{
 		SHA:     fileContent.SHA,
 		Message: github.String("delete terraform state"),
-		Branch:  github.String(state.Ref),
+		Branch:  github.String(g.Ref),
 	})
 
 	if err != nil {
@@ -173,7 +173,7 @@ func deleteHandler(c *gin.Context) {
 }
 
 func lockHandler(c *gin.Context) {
-	state, err := NewTerraformState(c)
+	g, err := NewGithubObject(c)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": err.Error(),
@@ -181,7 +181,7 @@ func lockHandler(c *gin.Context) {
 		return
 	}
 
-	fileContent, exists, err := state.Content(c)
+	fileContent, exists, err := g.GetContent(c)
 	if err != nil {
 		if err.Error() == "unauthorized" {
 			c.JSON(http.StatusUnauthorized, gin.H{
@@ -215,10 +215,10 @@ func lockHandler(c *gin.Context) {
 		c.Data(http.StatusConflict, "application/json", []byte(content))
 		return
 	} else {
-		_, _, err = gh.Repositories.CreateFile(c, state.Owner, state.Repo, state.Path, &github.RepositoryContentFileOptions{
+		_, _, err = client.Repositories.CreateFile(c, g.Owner, g.Repo, g.Path, &github.RepositoryContentFileOptions{
 			Message: github.String("create terraform state lock"),
 			Content: body,
-			Branch:  github.String(state.Ref),
+			Branch:  github.String(g.Ref),
 		})
 
 		if err != nil {
