@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"os"
 
 	"github.com/gin-gonic/gin"
@@ -15,6 +16,7 @@ func main() {
 
 	r := gin.Default()
 	r.GET("/:owner/:repo/*path", get)
+	r.POST("/:owner/:repo/*path", post)
 	r.Run(":8080")
 }
 
@@ -22,13 +24,12 @@ func get(c *gin.Context) {
 	owner := c.Param("owner")
 	repoName := c.Param("repo")
 	path := c.Param("path")
-
 	if path == "/" {
 		c.JSON(400, gin.H{
 			"error": "path is required",
 		})
 	}
-
+	path = path[1:]
 	ref := c.Query("ref")
 	if ref == "" {
 		ref = "main"
@@ -42,9 +43,16 @@ func get(c *gin.Context) {
 		return
 	}
 
-	fileContent, _, _, err := gh.Repositories.GetContents(c, owner, repoName, path, &github.RepositoryContentGetOptions{
+	fileContent, _, resp, err := gh.Repositories.GetContents(c, owner, repoName, path, &github.RepositoryContentGetOptions{
 		Ref: ref,
 	})
+
+	if resp.StatusCode == 404 {
+		c.JSON(404, gin.H{
+			"error": "not found",
+		})
+		return
+	}
 
 	if err != nil {
 		c.JSON(400, gin.H{
@@ -62,4 +70,45 @@ func get(c *gin.Context) {
 	}
 
 	c.Data(200, "application/json", []byte(content))
+}
+
+func post(c *gin.Context) {
+	owner := c.Param("owner")
+	repoName := c.Param("repo")
+	path := c.Param("path")
+	if path == "/" {
+		c.JSON(400, gin.H{
+			"error": "path is required",
+		})
+	}
+	path = path[1:]
+	ref := c.Query("ref")
+	if ref == "" {
+		ref = "main"
+	}
+
+	body, err := c.GetRawData()
+	if err != nil {
+		c.JSON(400, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	// create a new file in the repo
+	_, _, err = gh.Repositories.CreateFile(c, owner, repoName, path, &github.RepositoryContentFileOptions{
+		Message: github.String("create file"),
+		Content: body,
+		Branch:  github.String(ref),
+	})
+
+	if err != nil {
+		log.Println(err)
+		c.JSON(400, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	c.Data(200, "application/json", []byte("{}"))
 }
