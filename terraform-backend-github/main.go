@@ -29,7 +29,7 @@ func get(c *gin.Context) {
 		return
 	}
 
-	content, exists, err := state.Content(c)
+	fileContent, exists, err := state.Content(c)
 	if err != nil {
 		c.JSON(400, gin.H{
 			"error": err.Error(),
@@ -40,6 +40,14 @@ func get(c *gin.Context) {
 	if !exists {
 		c.JSON(404, gin.H{
 			"error": "file not found",
+		})
+		return
+	}
+
+	content, err := fileContent.GetContent()
+	if err != nil {
+		c.JSON(400, gin.H{
+			"error": err.Error(),
 		})
 		return
 	}
@@ -56,6 +64,14 @@ func post(c *gin.Context) {
 		return
 	}
 
+	fileContent, exists, err := state.Content(c)
+	if err != nil {
+		c.JSON(400, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+
 	body, err := c.GetRawData()
 	if err != nil {
 		c.JSON(400, gin.H{
@@ -64,11 +80,7 @@ func post(c *gin.Context) {
 		return
 	}
 
-	fileContent, _, resp, _ := gh.Repositories.GetContents(c, state.Owner, state.Repo, state.Path, &github.RepositoryContentGetOptions{
-		Ref: state.Ref,
-	})
-
-	if resp.StatusCode == 200 {
+	if exists {
 		_, _, err = gh.Repositories.UpdateFile(c, state.Owner, state.Repo, state.Path, &github.RepositoryContentFileOptions{
 			SHA:     fileContent.SHA,
 			Message: github.String("update file"),
@@ -85,7 +97,7 @@ func post(c *gin.Context) {
 		}
 
 		c.Data(200, "application/json", []byte("{}"))
-	} else if resp.StatusCode == 404 {
+	} else {
 		_, _, err = gh.Repositories.CreateFile(c, state.Owner, state.Repo, state.Path, &github.RepositoryContentFileOptions{
 			Message: github.String("create file"),
 			Content: body,

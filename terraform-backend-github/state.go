@@ -14,31 +14,26 @@ type TerraformState struct {
 	Ref   string
 }
 
-func (t *TerraformState) Content(c *gin.Context) (string, bool, error) {
+func (t *TerraformState) Content(c *gin.Context) (*github.RepositoryContent, bool, error) {
 	_, resp, _ := gh.Repositories.Get(c, t.Owner, t.Repo)
 	if resp.StatusCode == 401 {
-		return "", false, errors.New("unauthorized")
+		return nil, false, errors.New("unauthorized")
 	}
 	if resp.StatusCode == 404 {
-		return "", false, errors.New("repo not found")
+		return nil, false, errors.New("repo not found")
 	}
 
 	fileContent, _, resp, _ := gh.Repositories.GetContents(c, t.Owner, t.Repo, t.Path, &github.RepositoryContentGetOptions{
 		Ref: *github.String(t.Ref),
 	})
 	if resp.StatusCode == 401 {
-		return "", false, errors.New("unauthorized")
+		return nil, false, errors.New("unauthorized")
 	}
 	if resp.StatusCode == 404 {
-		return "", false, nil
+		return nil, false, nil
 	}
 
-	content, err := fileContent.GetContent()
-	if err != nil {
-		return "", false, err
-	}
-
-	return content, true, nil
+	return fileContent, true, nil
 }
 
 func NewTerraformState(c *gin.Context) (*TerraformState, error) {
