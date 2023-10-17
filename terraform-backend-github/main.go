@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"log"
 	"os"
 
@@ -9,6 +10,37 @@ import (
 )
 
 var gh *github.Client
+
+type TerraformState struct {
+	Owner string
+	Repo  string
+	Path  string
+	Ref   string
+}
+
+func NewTerraformState(c *gin.Context) (*TerraformState, error) {
+	owner := c.Param("owner")
+	repo := c.Param("repo")
+
+	path := c.Param("path")
+	if path == "/" {
+		err := errors.New("path is required")
+		return nil, err
+	}
+	path = path[1:]
+
+	ref := c.Query("ref")
+	if ref == "" {
+		ref = "main"
+	}
+
+	return &TerraformState{
+		Owner: owner,
+		Repo:  repo,
+		Path:  path,
+		Ref:   ref,
+	}, nil
+}
 
 func main() {
 	token := os.Getenv("GITHUB_TOKEN")
@@ -21,21 +53,7 @@ func main() {
 }
 
 func get(c *gin.Context) {
-	owner := c.Param("owner")
-	repoName := c.Param("repo")
-	path := c.Param("path")
-	if path == "/" {
-		c.JSON(400, gin.H{
-			"error": "path is required",
-		})
-	}
-	path = path[1:]
-	ref := c.Query("ref")
-	if ref == "" {
-		ref = "main"
-	}
-
-	_, _, err := gh.Repositories.Get(c, owner, repoName)
+	state, err := NewTerraformState(c)
 	if err != nil {
 		c.JSON(400, gin.H{
 			"error": err.Error(),
@@ -43,8 +61,16 @@ func get(c *gin.Context) {
 		return
 	}
 
-	fileContent, _, resp, err := gh.Repositories.GetContents(c, owner, repoName, path, &github.RepositoryContentGetOptions{
-		Ref: ref,
+	_, _, err = gh.Repositories.Get(c, state.Owner, state.Repo)
+	if err != nil {
+		c.JSON(400, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	fileContent, _, resp, err := gh.Repositories.GetContents(c, state.Owner, state.Repo, state.Path, &github.RepositoryContentGetOptions{
+		Ref: state.Ref,
 	})
 
 	if resp.StatusCode == 404 {
