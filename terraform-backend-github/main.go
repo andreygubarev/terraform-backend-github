@@ -42,13 +42,12 @@ func ReadHandler(ctx *gin.Context) {
 			ctx.JSON(http.StatusUnauthorized, gin.H{
 				"error": err.Error(),
 			})
-			return
 		} else {
 			ctx.JSON(http.StatusBadRequest, gin.H{
 				"error": err.Error(),
 			})
-			return
 		}
+		return
 	}
 
 	if !fileExists {
@@ -78,7 +77,7 @@ func CreateHandler(ctx *gin.Context) {
 		return
 	}
 
-	fileContent, exists, err := obj.GetContent(ctx)
+	fileContent, fileExists, err := obj.GetContent(ctx)
 	if err != nil {
 		if err.Error() == "unauthorized" {
 			ctx.JSON(http.StatusUnauthorized, gin.H{
@@ -100,14 +99,14 @@ func CreateHandler(ctx *gin.Context) {
 		return
 	}
 
-	if exists {
-		_, _, err = client.Repositories.UpdateFile(ctx, obj.Owner, obj.Repo, obj.Path, &github.RepositoryContentFileOptions{
-			SHA:     fileContent.SHA,
-			Message: github.String("update terraform state"),
-			Content: body,
+	if fileExists {
+		opts := &github.RepositoryContentFileOptions{
 			Branch:  github.String(obj.Ref),
-		})
-
+			Content: body,
+			Message: github.String("update terraform state"),
+			SHA:     fileContent.SHA,
+		}
+		_, _, err = client.Repositories.UpdateFile(ctx, obj.Owner, obj.Repo, obj.Path, opts)
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),
@@ -118,9 +117,9 @@ func CreateHandler(ctx *gin.Context) {
 		return
 	} else {
 		_, _, err = client.Repositories.CreateFile(ctx, obj.Owner, obj.Repo, obj.Path, &github.RepositoryContentFileOptions{
-			Message: github.String("create terraform state"),
-			Content: body,
 			Branch:  github.String(obj.Ref),
+			Content: body,
+			Message: github.String("Create a Terraform state"),
 		})
 
 		if err != nil {
@@ -144,7 +143,7 @@ func DeleteHandler(ctx *gin.Context) {
 		return
 	}
 
-	fileContent, exists, err := obj.GetContent(ctx)
+	fileContent, fileExists, err := obj.GetContent(ctx)
 	if err != nil {
 		if err.Error() == "unauthorized" {
 			ctx.JSON(http.StatusUnauthorized, gin.H{
@@ -158,25 +157,26 @@ func DeleteHandler(ctx *gin.Context) {
 		return
 	}
 
-	if !exists {
+	if !fileExists {
 		ctx.JSON(http.StatusNotFound, gin.H{
 			"error": "file not found",
 		})
 		return
 	}
 
-	_, _, err = client.Repositories.DeleteFile(ctx, obj.Owner, obj.Repo, obj.Path, &github.RepositoryContentFileOptions{
-		SHA:     fileContent.SHA,
-		Message: github.String("delete terraform state"),
+	opts := &github.RepositoryContentFileOptions{
 		Branch:  github.String(obj.Ref),
-	})
-
+		Message: github.String("Delete the Terraform state"),
+		SHA:     fileContent.SHA,
+	}
+	_, _, err = client.Repositories.DeleteFile(ctx, obj.Owner, obj.Repo, obj.Path, opts)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
 		})
 		return
 	}
+
 	ctx.Data(http.StatusOK, "application/json", []byte("{}"))
 }
 
@@ -189,7 +189,7 @@ func LockHandler(ctx *gin.Context) {
 		return
 	}
 
-	fileContent, exists, err := obj.GetContent(ctx)
+	fileContent, fileExists, err := obj.GetContent(ctx)
 	if err != nil {
 		if err.Error() == "unauthorized" {
 			ctx.JSON(http.StatusUnauthorized, gin.H{
@@ -211,7 +211,7 @@ func LockHandler(ctx *gin.Context) {
 		return
 	}
 
-	if exists {
+	if fileExists {
 		content, err := fileContent.GetContent()
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, gin.H{
@@ -223,12 +223,12 @@ func LockHandler(ctx *gin.Context) {
 		ctx.Data(http.StatusConflict, "application/json", []byte(content))
 		return
 	} else {
-		_, _, err = client.Repositories.CreateFile(ctx, obj.Owner, obj.Repo, obj.Path, &github.RepositoryContentFileOptions{
-			Message: github.String("create terraform state lock"),
-			Content: body,
+		opts := &github.RepositoryContentFileOptions{
 			Branch:  github.String(obj.Ref),
-		})
-
+			Content: body,
+			Message: github.String("Create a Terraform state lock"),
+		}
+		_, _, err = client.Repositories.CreateFile(ctx, obj.Owner, obj.Repo, obj.Path, opts)
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),
