@@ -15,6 +15,7 @@ func main() {
 	if token == "" {
 		panic("GITHUB_TOKEN is required")
 	}
+
 	client = github.NewClient(nil).WithAuthToken(token)
 
 	r := gin.Default()
@@ -35,15 +36,22 @@ func getHandler(c *gin.Context) {
 		return
 	}
 
-	fileContent, exists, err := obj.GetContent(c)
+	fileContent, fileExists, err := obj.GetContent(c)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": err.Error(),
-		})
-		return
+		if err.Error() == "unauthorized" {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": err.Error(),
+			})
+			return
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
 	}
 
-	if !exists {
+	if !fileExists {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": "file not found",
 		})
