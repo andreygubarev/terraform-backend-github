@@ -17,6 +17,16 @@ services:
     restart: unless-stopped
 ```
 
+```hcl
+terraform {
+  backend "http" {
+    address = "http://localhost:8080/andreygubarev/terraform-backend/state/terraform.tfstate"
+    lock_address = "http://localhost:8080/andreygubarev/terraform-backend/state/terraform.tfstate.lock"
+    unlock_address = "http://localhost:8080/andreygubarev/terraform-backend/state/terraform.tfstate.lock"
+  }
+}
+```
+
 # Motivation
 
 # Reference
