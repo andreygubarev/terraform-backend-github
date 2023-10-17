@@ -70,7 +70,7 @@ func get(c *gin.Context) {
 	}
 
 	fileContent, _, resp, err := gh.Repositories.GetContents(c, state.Owner, state.Repo, state.Path, &github.RepositoryContentGetOptions{
-		Ref: state.Ref,
+		Ref: *github.String(state.Ref),
 	})
 
 	if resp.StatusCode == 404 {
@@ -99,18 +99,12 @@ func get(c *gin.Context) {
 }
 
 func post(c *gin.Context) {
-	owner := c.Param("owner")
-	repoName := c.Param("repo")
-	path := c.Param("path")
-	if path == "/" {
+	state, err := NewTerraformState(c)
+	if err != nil {
 		c.JSON(400, gin.H{
-			"error": "path is required",
+			"error": err.Error(),
 		})
-	}
-	path = path[1:]
-	ref := c.Query("ref")
-	if ref == "" {
-		ref = "main"
+		return
 	}
 
 	body, err := c.GetRawData()
@@ -121,18 +115,16 @@ func post(c *gin.Context) {
 		return
 	}
 
-	// check if file exists
-	fileContent, _, resp, _ := gh.Repositories.GetContents(c, owner, repoName, path, &github.RepositoryContentGetOptions{
-		Ref: ref,
+	fileContent, _, resp, _ := gh.Repositories.GetContents(c, state.Owner, state.Repo, state.Path, &github.RepositoryContentGetOptions{
+		Ref: state.Ref,
 	})
 
 	if resp.StatusCode == 200 {
-		// update the file in the repo
-		_, _, err = gh.Repositories.UpdateFile(c, owner, repoName, path, &github.RepositoryContentFileOptions{
+		_, _, err = gh.Repositories.UpdateFile(c, state.Owner, state.Repo, state.Path, &github.RepositoryContentFileOptions{
 			SHA:     fileContent.SHA,
 			Message: github.String("update file"),
 			Content: body,
-			Branch:  github.String(ref),
+			Branch:  github.String(state.Ref),
 		})
 
 		if err != nil {
@@ -145,11 +137,10 @@ func post(c *gin.Context) {
 
 		c.Data(200, "application/json", []byte("{}"))
 	} else if resp.StatusCode == 404 {
-		// create a new file in the repo
-		_, _, err = gh.Repositories.CreateFile(c, owner, repoName, path, &github.RepositoryContentFileOptions{
+		_, _, err = gh.Repositories.CreateFile(c, state.Owner, state.Repo, state.Path, &github.RepositoryContentFileOptions{
 			Message: github.String("create file"),
 			Content: body,
-			Branch:  github.String(ref),
+			Branch:  github.String(state.Ref),
 		})
 
 		if err != nil {
