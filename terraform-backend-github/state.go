@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/go-github/v56/github"
 )
 
 type TerraformState struct {
@@ -11,6 +12,33 @@ type TerraformState struct {
 	Repo  string
 	Path  string
 	Ref   string
+}
+
+func (t *TerraformState) Content(c *gin.Context) (string, bool, error) {
+	_, resp, _ := gh.Repositories.Get(c, t.Owner, t.Repo)
+	if resp.StatusCode == 401 {
+		return "", false, errors.New("unauthorized")
+	}
+	if resp.StatusCode == 404 {
+		return "", false, errors.New("repo not found")
+	}
+
+	fileContent, _, resp, _ := gh.Repositories.GetContents(c, t.Owner, t.Repo, t.Path, &github.RepositoryContentGetOptions{
+		Ref: *github.String(t.Ref),
+	})
+	if resp.StatusCode == 401 {
+		return "", false, errors.New("unauthorized")
+	}
+	if resp.StatusCode == 404 {
+		return "", false, nil
+	}
+
+	content, err := fileContent.GetContent()
+	if err != nil {
+		return "", false, err
+	}
+
+	return content, true, nil
 }
 
 func NewTerraformState(c *gin.Context) (*TerraformState, error) {

@@ -29,7 +29,7 @@ func get(c *gin.Context) {
 		return
 	}
 
-	_, _, err = gh.Repositories.Get(c, state.Owner, state.Repo)
+	content, exists, err := state.Content(c)
 	if err != nil {
 		c.JSON(400, gin.H{
 			"error": err.Error(),
@@ -37,28 +37,9 @@ func get(c *gin.Context) {
 		return
 	}
 
-	fileContent, _, resp, err := gh.Repositories.GetContents(c, state.Owner, state.Repo, state.Path, &github.RepositoryContentGetOptions{
-		Ref: *github.String(state.Ref),
-	})
-
-	if resp.StatusCode == 404 {
+	if !exists {
 		c.JSON(404, gin.H{
-			"error": "not found",
-		})
-		return
-	}
-
-	if err != nil {
-		c.JSON(400, gin.H{
-			"error": err.Error(),
-		})
-		return
-	}
-
-	content, err := fileContent.GetContent()
-	if err != nil {
-		c.JSON(400, gin.H{
-			"error": err.Error(),
+			"error": "file not found",
 		})
 		return
 	}
