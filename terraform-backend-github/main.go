@@ -72,15 +72,21 @@ func postHandler(c *gin.Context) {
 
 	fileContent, exists, err := state.Content(c)
 	if err != nil {
-		c.JSON(400, gin.H{
-			"error": err.Error(),
-		})
+		if err.Error() == "unauthorized" {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": err.Error(),
+			})
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": err.Error(),
+			})
+		}
 		return
 	}
 
 	body, err := c.GetRawData()
 	if err != nil {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
 		})
 		return
@@ -95,12 +101,12 @@ func postHandler(c *gin.Context) {
 		})
 
 		if err != nil {
-			c.JSON(400, gin.H{
+			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),
 			})
 			return
 		}
-		c.Data(200, "application/json", []byte("{}"))
+		c.Data(http.StatusOK, "application/json", []byte("{}"))
 		return
 	} else {
 		_, _, err = gh.Repositories.CreateFile(c, state.Owner, state.Repo, state.Path, &github.RepositoryContentFileOptions{
@@ -110,13 +116,13 @@ func postHandler(c *gin.Context) {
 		})
 
 		if err != nil {
-			c.JSON(400, gin.H{
+			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),
 			})
 			return
 		}
 
-		c.Data(200, "application/json", []byte("{}"))
+		c.Data(http.StatusOK, "application/json", []byte("{}"))
 		return
 	}
 }
@@ -124,7 +130,7 @@ func postHandler(c *gin.Context) {
 func deleteHandler(c *gin.Context) {
 	state, err := NewTerraformState(c)
 	if err != nil {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": err.Error(),
 		})
 		return
@@ -132,14 +138,20 @@ func deleteHandler(c *gin.Context) {
 
 	fileContent, exists, err := state.Content(c)
 	if err != nil {
-		c.JSON(400, gin.H{
-			"error": err.Error(),
-		})
+		if err.Error() == "unauthorized" {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": err.Error(),
+			})
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": err.Error(),
+			})
+		}
 		return
 	}
 
 	if !exists {
-		c.JSON(404, gin.H{
+		c.JSON(http.StatusNotFound, gin.H{
 			"error": "file not found",
 		})
 		return
@@ -152,18 +164,18 @@ func deleteHandler(c *gin.Context) {
 	})
 
 	if err != nil {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
 		})
 		return
 	}
-	c.Data(200, "application/json", []byte("{}"))
+	c.Data(http.StatusOK, "application/json", []byte("{}"))
 }
 
 func lockHandler(c *gin.Context) {
 	state, err := NewTerraformState(c)
 	if err != nil {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": err.Error(),
 		})
 		return
@@ -171,9 +183,15 @@ func lockHandler(c *gin.Context) {
 
 	fileContent, exists, err := state.Content(c)
 	if err != nil {
-		c.JSON(400, gin.H{
-			"error": err.Error(),
-		})
+		if err.Error() == "unauthorized" {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": err.Error(),
+			})
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": err.Error(),
+			})
+		}
 		return
 	}
 
@@ -204,13 +222,13 @@ func lockHandler(c *gin.Context) {
 		})
 
 		if err != nil {
-			c.JSON(400, gin.H{
+			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),
 			})
 			return
 		}
 
-		c.Data(200, "application/json", body)
+		c.Data(http.StatusOK, "application/json", body)
 		return
 	}
 }
