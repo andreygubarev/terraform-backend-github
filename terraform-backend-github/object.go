@@ -14,8 +14,8 @@ type GithubObject struct {
 	Ref   string
 }
 
-func (g *GithubObject) GetContent(c *gin.Context) (*github.RepositoryContent, bool, error) {
-	_, resp, _ := client.Repositories.Get(c, g.Owner, g.Repo)
+func (obj *GithubObject) GetContent(c *gin.Context) (*github.RepositoryContent, bool, error) {
+	_, resp, _ := client.Repositories.Get(c, obj.Owner, obj.Repo)
 	if resp.StatusCode == 401 {
 		return nil, false, errors.New("unauthorized")
 	}
@@ -23,8 +23,8 @@ func (g *GithubObject) GetContent(c *gin.Context) (*github.RepositoryContent, bo
 		return nil, false, errors.New("repo not found")
 	}
 
-	fileContent, _, resp, _ := client.Repositories.GetContents(c, g.Owner, g.Repo, g.Path, &github.RepositoryContentGetOptions{
-		Ref: *github.String(g.Ref),
+	fileContent, _, resp, _ := client.Repositories.GetContents(c, obj.Owner, obj.Repo, obj.Path, &github.RepositoryContentGetOptions{
+		Ref: *github.String(obj.Ref),
 	})
 	if resp.StatusCode == 401 {
 		return nil, false, errors.New("unauthorized")
