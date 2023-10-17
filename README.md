@@ -9,7 +9,7 @@ version: '3'
 
 services:
   terraform-backend-github:
-    image: ghcr.io/andreygubarev/terraform-backend-github:0.1.0
+    image: ghcr.io/andreygubarev/terraform-backend-github:0.1.1
     environment:
       - GITHUB_TOKEN=${GITHUB_TOKEN}
     ports:
