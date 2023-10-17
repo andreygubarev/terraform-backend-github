@@ -19,15 +19,15 @@ func main() {
 	client = github.NewClient(nil).WithAuthToken(token)
 
 	r := gin.Default()
-	r.GET("/:owner/:repo/*path", getHandler)
-	r.POST("/:owner/:repo/*path", postHandler)
-	r.DELETE("/:owner/:repo/*path", deleteHandler)
-	r.Handle("LOCK", "/:owner/:repo/*path", lockHandler)
-	r.Handle("UNLOCK", "/:owner/:repo/*path", deleteHandler)
+	r.GET("/:owner/:repo/*path", ReadHandler)
+	r.POST("/:owner/:repo/*path", CreateHandler)
+	r.DELETE("/:owner/:repo/*path", DeleteHandler)
+	r.Handle("LOCK", "/:owner/:repo/*path", LockHandler)
+	r.Handle("UNLOCK", "/:owner/:repo/*path", DeleteHandler)
 	r.Run(":8080")
 }
 
-func getHandler(ctx *gin.Context) {
+func ReadHandler(ctx *gin.Context) {
 	obj, err := NewGithubObject(ctx)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
@@ -69,7 +69,7 @@ func getHandler(ctx *gin.Context) {
 	ctx.Data(200, "application/json", []byte(content))
 }
 
-func postHandler(ctx *gin.Context) {
+func CreateHandler(ctx *gin.Context) {
 	obj, err := NewGithubObject(ctx)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
@@ -135,7 +135,7 @@ func postHandler(ctx *gin.Context) {
 	}
 }
 
-func deleteHandler(ctx *gin.Context) {
+func DeleteHandler(ctx *gin.Context) {
 	obj, err := NewGithubObject(ctx)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
@@ -180,7 +180,7 @@ func deleteHandler(ctx *gin.Context) {
 	ctx.Data(http.StatusOK, "application/json", []byte("{}"))
 }
 
-func lockHandler(ctx *gin.Context) {
+func LockHandler(ctx *gin.Context) {
 	obj, err := NewGithubObject(ctx)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
