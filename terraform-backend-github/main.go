@@ -11,6 +11,9 @@ var gh *github.Client
 
 func main() {
 	token := os.Getenv("GITHUB_TOKEN")
+	if token == "" {
+		panic("GITHUB_TOKEN is required")
+	}
 	gh = github.NewClient(nil).WithAuthToken(token)
 
 	r := gin.Default()
