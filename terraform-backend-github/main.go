@@ -27,24 +27,24 @@ func main() {
 	r.Run(":8080")
 }
 
-func getHandler(c *gin.Context) {
-	obj, err := NewGithubObject(c)
+func getHandler(ctx *gin.Context) {
+	obj, err := NewGithubObject(ctx)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
+		ctx.JSON(http.StatusBadRequest, gin.H{
 			"error": err.Error(),
 		})
 		return
 	}
 
-	fileContent, fileExists, err := obj.GetContent(c)
+	fileContent, fileExists, err := obj.GetContent(ctx)
 	if err != nil {
 		if err.Error() == "unauthorized" {
-			c.JSON(http.StatusUnauthorized, gin.H{
+			ctx.JSON(http.StatusUnauthorized, gin.H{
 				"error": err.Error(),
 			})
 			return
 		} else {
-			c.JSON(http.StatusBadRequest, gin.H{
+			ctx.JSON(http.StatusBadRequest, gin.H{
 				"error": err.Error(),
 			})
 			return
@@ -52,7 +52,7 @@ func getHandler(c *gin.Context) {
 	}
 
 	if !fileExists {
-		c.JSON(http.StatusNotFound, gin.H{
+		ctx.JSON(http.StatusNotFound, gin.H{
 			"error": "file not found",
 		})
 		return
@@ -60,48 +60,48 @@ func getHandler(c *gin.Context) {
 
 	content, err := fileContent.GetContent()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
+		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
 		})
 		return
 	}
 
-	c.Data(200, "application/json", []byte(content))
+	ctx.Data(200, "application/json", []byte(content))
 }
 
-func postHandler(c *gin.Context) {
-	obj, err := NewGithubObject(c)
+func postHandler(ctx *gin.Context) {
+	obj, err := NewGithubObject(ctx)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
+		ctx.JSON(http.StatusBadRequest, gin.H{
 			"error": err.Error(),
 		})
 		return
 	}
 
-	fileContent, exists, err := obj.GetContent(c)
+	fileContent, exists, err := obj.GetContent(ctx)
 	if err != nil {
 		if err.Error() == "unauthorized" {
-			c.JSON(http.StatusUnauthorized, gin.H{
+			ctx.JSON(http.StatusUnauthorized, gin.H{
 				"error": err.Error(),
 			})
 		} else {
-			c.JSON(http.StatusBadRequest, gin.H{
+			ctx.JSON(http.StatusBadRequest, gin.H{
 				"error": err.Error(),
 			})
 		}
 		return
 	}
 
-	body, err := c.GetRawData()
+	body, err := ctx.GetRawData()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
+		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
 		})
 		return
 	}
 
 	if exists {
-		_, _, err = client.Repositories.UpdateFile(c, obj.Owner, obj.Repo, obj.Path, &github.RepositoryContentFileOptions{
+		_, _, err = client.Repositories.UpdateFile(ctx, obj.Owner, obj.Repo, obj.Path, &github.RepositoryContentFileOptions{
 			SHA:     fileContent.SHA,
 			Message: github.String("update terraform state"),
 			Content: body,
@@ -109,49 +109,49 @@ func postHandler(c *gin.Context) {
 		})
 
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
+			ctx.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),
 			})
 			return
 		}
-		c.Data(http.StatusOK, "application/json", []byte("{}"))
+		ctx.Data(http.StatusOK, "application/json", []byte("{}"))
 		return
 	} else {
-		_, _, err = client.Repositories.CreateFile(c, obj.Owner, obj.Repo, obj.Path, &github.RepositoryContentFileOptions{
+		_, _, err = client.Repositories.CreateFile(ctx, obj.Owner, obj.Repo, obj.Path, &github.RepositoryContentFileOptions{
 			Message: github.String("create terraform state"),
 			Content: body,
 			Branch:  github.String(obj.Ref),
 		})
 
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
+			ctx.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),
 			})
 			return
 		}
 
-		c.Data(http.StatusOK, "application/json", []byte("{}"))
+		ctx.Data(http.StatusOK, "application/json", []byte("{}"))
 		return
 	}
 }
 
-func deleteHandler(c *gin.Context) {
-	obj, err := NewGithubObject(c)
+func deleteHandler(ctx *gin.Context) {
+	obj, err := NewGithubObject(ctx)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
+		ctx.JSON(http.StatusBadRequest, gin.H{
 			"error": err.Error(),
 		})
 		return
 	}
 
-	fileContent, exists, err := obj.GetContent(c)
+	fileContent, exists, err := obj.GetContent(ctx)
 	if err != nil {
 		if err.Error() == "unauthorized" {
-			c.JSON(http.StatusUnauthorized, gin.H{
+			ctx.JSON(http.StatusUnauthorized, gin.H{
 				"error": err.Error(),
 			})
 		} else {
-			c.JSON(http.StatusBadRequest, gin.H{
+			ctx.JSON(http.StatusBadRequest, gin.H{
 				"error": err.Error(),
 			})
 		}
@@ -159,53 +159,53 @@ func deleteHandler(c *gin.Context) {
 	}
 
 	if !exists {
-		c.JSON(http.StatusNotFound, gin.H{
+		ctx.JSON(http.StatusNotFound, gin.H{
 			"error": "file not found",
 		})
 		return
 	}
 
-	_, _, err = client.Repositories.DeleteFile(c, obj.Owner, obj.Repo, obj.Path, &github.RepositoryContentFileOptions{
+	_, _, err = client.Repositories.DeleteFile(ctx, obj.Owner, obj.Repo, obj.Path, &github.RepositoryContentFileOptions{
 		SHA:     fileContent.SHA,
 		Message: github.String("delete terraform state"),
 		Branch:  github.String(obj.Ref),
 	})
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
+		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
 		})
 		return
 	}
-	c.Data(http.StatusOK, "application/json", []byte("{}"))
+	ctx.Data(http.StatusOK, "application/json", []byte("{}"))
 }
 
-func lockHandler(c *gin.Context) {
-	obj, err := NewGithubObject(c)
+func lockHandler(ctx *gin.Context) {
+	obj, err := NewGithubObject(ctx)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
+		ctx.JSON(http.StatusBadRequest, gin.H{
 			"error": err.Error(),
 		})
 		return
 	}
 
-	fileContent, exists, err := obj.GetContent(c)
+	fileContent, exists, err := obj.GetContent(ctx)
 	if err != nil {
 		if err.Error() == "unauthorized" {
-			c.JSON(http.StatusUnauthorized, gin.H{
+			ctx.JSON(http.StatusUnauthorized, gin.H{
 				"error": err.Error(),
 			})
 		} else {
-			c.JSON(http.StatusBadRequest, gin.H{
+			ctx.JSON(http.StatusBadRequest, gin.H{
 				"error": err.Error(),
 			})
 		}
 		return
 	}
 
-	body, err := c.GetRawData()
+	body, err := ctx.GetRawData()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
+		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
 		})
 		return
@@ -214,29 +214,29 @@ func lockHandler(c *gin.Context) {
 	if exists {
 		content, err := fileContent.GetContent()
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
+			ctx.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),
 			})
 			return
 		}
 
-		c.Data(http.StatusConflict, "application/json", []byte(content))
+		ctx.Data(http.StatusConflict, "application/json", []byte(content))
 		return
 	} else {
-		_, _, err = client.Repositories.CreateFile(c, obj.Owner, obj.Repo, obj.Path, &github.RepositoryContentFileOptions{
+		_, _, err = client.Repositories.CreateFile(ctx, obj.Owner, obj.Repo, obj.Path, &github.RepositoryContentFileOptions{
 			Message: github.String("create terraform state lock"),
 			Content: body,
 			Branch:  github.String(obj.Ref),
 		})
 
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
+			ctx.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),
 			})
 			return
 		}
 
-		c.Data(http.StatusOK, "application/json", body)
+		ctx.Data(http.StatusOK, "application/json", body)
 		return
 	}
 }
