@@ -29,7 +29,7 @@ func main() {
 func getHandler(c *gin.Context) {
 	state, err := NewTerraformState(c)
 	if err != nil {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": err.Error(),
 		})
 		return
@@ -37,14 +37,14 @@ func getHandler(c *gin.Context) {
 
 	fileContent, exists, err := state.Content(c)
 	if err != nil {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": err.Error(),
 		})
 		return
 	}
 
 	if !exists {
-		c.JSON(404, gin.H{
+		c.JSON(http.StatusNotFound, gin.H{
 			"error": "file not found",
 		})
 		return
@@ -52,7 +52,7 @@ func getHandler(c *gin.Context) {
 
 	content, err := fileContent.GetContent()
 	if err != nil {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
 		})
 		return
@@ -64,7 +64,7 @@ func getHandler(c *gin.Context) {
 func postHandler(c *gin.Context) {
 	state, err := NewTerraformState(c)
 	if err != nil {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": err.Error(),
 		})
 		return
