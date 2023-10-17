@@ -4,6 +4,8 @@ Terraform HTTP backend that uses Github as a storage backend.
 
 # Usage
 
+Run the container using the following docker-compose snippet:
+
 ```yaml
 version: '3'
 
@@ -16,6 +18,8 @@ services:
       - 8080:8080
     restart: unless-stopped
 ```
+
+Configure the Terraform HTTP backend in your Terraform configuration:
 
 ```hcl
 terraform {
