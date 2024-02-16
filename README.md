@@ -1,4 +1,4 @@
-# Terraform HTTP Backend with GitHub
+# Terraform HTTP Backend backed by GitHub
 
 Terraform HTTP backend that uses Github as a storage backend.
 
